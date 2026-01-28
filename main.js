@@ -64,10 +64,17 @@ const statsToggle = document.getElementById('stats-toggle');
 const statsView = document.getElementById('stats-view');
 const closeStats = document.getElementById('close-stats');
 const statsGrid = document.getElementById('stats-grid');
+const settingsToggle = document.getElementById('settings-toggle');
+const settingsView = document.getElementById('settings-view');
+const closeSettings = document.getElementById('close-settings');
+const userMgmtList = document.getElementById('user-management-list');
+const addUserBtn = document.getElementById('add-user-btn');
 const dateDisplay = document.getElementById('current-date');
 
 // Initialize
 function init() {
+    // Migrate old history format if needed (if history was simple object, now it's keyed by user)
+    // Most logic already handles history[currentUser], but we ensure users array and history keys match
     renderUserSelector();
     updateDateDisplay();
     loadCurrentDayState();
@@ -238,6 +245,91 @@ function renderStats() {
         statsGrid.appendChild(card);
     });
 }
+
+// User Management Actions
+settingsToggle.onclick = () => {
+    renderSettings();
+    settingsView.classList.remove('hidden');
+};
+
+closeSettings.onclick = () => settingsView.classList.add('hidden');
+
+function renderSettings() {
+    userMgmtList.innerHTML = '';
+    users.forEach((user, index) => {
+        const div = document.createElement('div');
+        div.className = 'user-edit-row';
+        div.innerHTML = `
+            <input type="text" value="${user}" onchange="renameUser(${index}, this.value)">
+            <button class="small-delete-btn" onclick="deleteUser(${index})">🗑️</button>
+        `;
+        userMgmtList.appendChild(div);
+    });
+}
+
+function renameUser(index, newName) {
+    const oldName = users[index];
+    newName = newName.trim();
+    if (!newName || newName === oldName) {
+        renderSettings(); // Reset to current name if empty or same
+        return;
+    }
+
+    if (users.includes(newName)) {
+        alert("Name already exists!");
+        renderSettings();
+        return;
+    }
+
+    // Update users array
+    users[index] = newName;
+
+    // Migrate history
+    if (history[oldName]) {
+        history[newName] = history[oldName];
+        delete history[oldName];
+    }
+
+    // Update current user if renamed
+    if (currentUser === oldName) {
+        currentUser = newName;
+    }
+
+    saveAll();
+    renderUserSelector();
+    renderChores();
+    renderSettings();
+}
+
+function deleteUser(index) {
+    if (users.length <= 1) {
+        alert("You must have at least one child!");
+        return;
+    }
+
+    const userName = users[index];
+    if (confirm(`Delete data for ${userName}? This cannot be undone.`)) {
+        users.splice(index, 1);
+        delete history[userName];
+
+        if (currentUser === userName) {
+            currentUser = users[0];
+        }
+
+        saveAll();
+        renderUserSelector();
+        renderChores();
+        renderSettings();
+    }
+}
+
+addUserBtn.onclick = () => {
+    const newName = `New Child ${users.length + 1}`;
+    users.push(newName);
+    saveAll();
+    renderUserSelector();
+    renderSettings();
+};
 
 // Event Listeners
 morningBtn.onclick = () => switchMode('morning');

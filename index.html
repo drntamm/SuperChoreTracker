@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Super Chore Tracker</title>
-    <meta name="description" content="A vibrant, kid-friendly chore tracker to help children stay organized with morning and evening routines.">
+    <meta name="description"
+        content="A vibrant, kid-friendly chore tracker to help children stay organized with morning and evening routines.">
     <meta name="theme-color" content="#FF9A9E">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -17,6 +18,7 @@
                 <!-- Users will be injected here -->
             </select>
             <button class="stats-toggle" id="stats-toggle" aria-label="View statistics">📊 Stats</button>
+            <button class="settings-toggle" id="settings-toggle" aria-label="Manage Users">⚙️</button>
         </div>
 
         <header>
@@ -39,7 +41,17 @@
             <div class="stats-grid" id="stats-grid">
                 <!-- Daily stats will be injected here -->
             </div>
-            <button class="close-stats" id="close-stats">Close</button>
+            <button class="close-view" id="close-stats">Close</button>
+        </div>
+
+        <!-- Settings View -->
+        <div id="settings-view" class="settings-view hidden">
+            <h3>Manage Names</h3>
+            <div id="user-management-list" class="user-management-list">
+                <!-- User edit rows will be injected here -->
+            </div>
+            <button class="add-user-btn" id="add-user-btn">+ Add Child</button>
+            <button class="close-view" id="close-settings">Close</button>
         </div>
 
         <ul class="chore-list" id="chore-list">
