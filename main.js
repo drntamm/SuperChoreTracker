@@ -41,6 +41,7 @@ try {
 
 currentUser = localStorage.getItem('chore_current_user') || users[0];
 currentMode = 'morning';
+let parentalPin = localStorage.getItem('chore_pin') || null;
 
 try {
     history = JSON.parse(localStorage.getItem('chore_history')) || {};
@@ -69,6 +70,12 @@ const settingsView = document.getElementById('settings-view');
 const closeSettings = document.getElementById('close-settings');
 const userMgmtList = document.getElementById('user-management-list');
 const addUserBtn = document.getElementById('add-user-btn');
+const securityView = document.getElementById('security-view');
+const closeSecurity = document.getElementById('close-security');
+const securityTitle = document.getElementById('security-title');
+const securityMsg = document.getElementById('security-msg');
+const pinDisplay = document.getElementById('pin-display');
+const keypad = document.getElementById('keypad');
 const dateDisplay = document.getElementById('current-date');
 
 // Initialize
@@ -170,6 +177,7 @@ function saveAll() {
         localStorage.setItem('chore_history', JSON.stringify(history));
         localStorage.setItem('chore_users', JSON.stringify(users));
         localStorage.setItem('chore_current_user', currentUser);
+        if (parentalPin) localStorage.setItem('chore_pin', parentalPin);
     } catch (e) {
         console.error("Failed to save to localStorage:", e);
         // Fallback for full storage or other issues
@@ -248,8 +256,10 @@ function renderStats() {
 
 // User Management Actions
 settingsToggle.onclick = () => {
-    renderSettings();
-    settingsView.classList.remove('hidden');
+    requireParentalControl(() => {
+        renderSettings();
+        settingsView.classList.remove('hidden');
+    });
 };
 
 closeSettings.onclick = () => settingsView.classList.add('hidden');
@@ -265,6 +275,22 @@ function renderSettings() {
         `;
         userMgmtList.appendChild(div);
     });
+
+    // Add PIN management option
+    const pinDiv = document.createElement('div');
+    pinDiv.className = 'user-edit-row';
+    pinDiv.style.marginTop = '20px';
+    pinDiv.innerHTML = `
+        <button class="add-user-btn" onclick="setupNewPin()" style="border-style: solid; background: #F1F5F9; color: var(--text-main); border-color: #E2E8F0;">
+            ${parentalPin ? 'Change PIN' : 'Set Parental PIN'}
+        </button>
+    `;
+    userMgmtList.appendChild(pinDiv);
+}
+
+function setupNewPin() {
+    settingsView.classList.add('hidden');
+    startPinWorkflow('SET');
 }
 
 function renameUser(index, newName) {
@@ -331,18 +357,93 @@ addUserBtn.onclick = () => {
     renderSettings();
 };
 
+// Security Logic
+let currentPinBuffer = '';
+let securityCallback = null;
+let securityMode = 'VERIFY'; // 'VERIFY' or 'SET'
+
+function requireParentalControl(callback) {
+    if (!parentalPin) {
+        // No PIN set yet, but we should probably advise setting one
+        callback();
+        return;
+    }
+    securityCallback = callback;
+    startPinWorkflow('VERIFY');
+}
+
+function startPinWorkflow(mode) {
+    securityMode = mode;
+    currentPinBuffer = '';
+    securityTitle.textContent = mode === 'SET' ? 'Set Parental PIN' : 'Parental Control';
+    securityMsg.textContent = mode === 'SET' ? 'Create a 4-digit PIN' : 'Enter PIN to continue';
+    updatePinDisplay();
+    securityView.classList.remove('hidden');
+}
+
+function updatePinDisplay() {
+    const dots = pinDisplay.querySelectorAll('span');
+    dots.forEach((dot, i) => {
+        dot.classList.toggle('filled', i < currentPinBuffer.length);
+    });
+}
+
+keypad.onclick = (e) => {
+    if (!e.target.classList.contains('key')) return;
+    const val = e.target.textContent;
+
+    if (val === 'C') {
+        currentPinBuffer = '';
+    } else if (val === '✕') {
+        currentPinBuffer = currentPinBuffer.slice(0, -1);
+    } else if (currentPinBuffer.length < 4) {
+        currentPinBuffer += val;
+    }
+
+    updatePinDisplay();
+
+    if (currentPinBuffer.length === 4) {
+        setTimeout(handlePinComplete, 250);
+    }
+};
+
+function handlePinComplete() {
+    if (securityMode === 'SET') {
+        parentalPin = currentPinBuffer;
+        saveAll();
+        alert("PIN saved successfully!");
+        securityView.classList.add('hidden');
+    } else {
+        if (currentPinBuffer === parentalPin) {
+            securityView.classList.add('hidden');
+            if (securityCallback) securityCallback();
+        } else {
+            alert("Incorrect PIN!");
+            currentPinBuffer = '';
+            updatePinDisplay();
+        }
+    }
+}
+
+closeSecurity.onclick = () => {
+    securityView.classList.add('hidden');
+    securityCallback = null;
+};
+
 // Event Listeners
 morningBtn.onclick = () => switchMode('morning');
 eveningBtn.onclick = () => switchMode('evening');
 addBtn.onclick = addChore;
 choreInput.onkeypress = (e) => { if (e.key === 'Enter') addChore(); };
 resetBtn.onclick = () => {
-    if (confirm('Reset today\'s chores for ' + currentUser + '?')) {
-        const today = getTodayDate();
-        history[currentUser][today][currentMode].forEach(c => c.completed = false);
-        saveAll();
-        renderChores();
-    }
+    requireParentalControl(() => {
+        if (confirm('Reset today\'s chores for ' + currentUser + '?')) {
+            const today = getTodayDate();
+            history[currentUser][today][currentMode].forEach(c => c.completed = false);
+            saveAll();
+            renderChores();
+        }
+    });
 };
 
 init();
