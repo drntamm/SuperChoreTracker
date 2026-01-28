@@ -1,0 +1,17 @@
+{
+  "name": "super-chore-tracker",
+  "version": "1.0.0",
+  "description": "A vibrant, kid-friendly chore tracker with morning/evening routines and stats.",
+  "main": "main.js",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "keywords": [
+    "chore",
+    "tracker",
+    "kids",
+    "routine"
+  ],
+  "author": "",
+  "license": "MIT"
+}

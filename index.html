@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Chore Tracker</title>
+    <meta name="description" content="A vibrant, kid-friendly chore tracker to help children stay organized with morning and evening routines.">
+    <meta name="theme-color" content="#FF9A9E">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <div class="top-bar">
+            <select id="user-select" class="user-select">
+                <!-- Users will be injected here -->
+            </select>
+            <button class="stats-toggle" id="stats-toggle" aria-label="View statistics">📊 Stats</button>
+        </div>
+
+        <header>
+            <div class="mode-selector">
+                <button class="mode-btn morning active" id="morning-mode">
+                    <span class="icon">☀️</span> Morning
+                </button>
+                <button class="mode-btn evening" id="evening-mode">
+                    <span class="icon">🌙</span> Evening
+                </button>
+            </div>
+            <h1 id="app-title">Chore Time!</h1>
+            <div id="current-date" class="current-date">Wednesday, Jan 28</div>
+            <p class="subtitle" id="app-subtitle">Check your tasks for a great morning!</p>
+        </header>
+
+        <!-- Stats View (Hidden by default) -->
+        <div id="stats-view" class="stats-view hidden">
+            <h3>Weekly Progress</h3>
+            <div class="stats-grid" id="stats-grid">
+                <!-- Daily stats will be injected here -->
+            </div>
+            <button class="close-stats" id="close-stats">Close</button>
+        </div>
+
+        <ul class="chore-list" id="chore-list">
+            <!-- Chores will be injected here -->
+        </ul>
+
+        <div class="add-chore">
+            <input type="text" id="chore-input" placeholder="Add a new chore...">
+            <button class="add-btn" id="add-btn" aria-label="Add chore">Add</button>
+        </div>
+
+        <div class="footer-actions">
+            <div class="progress-info" id="progress-info">0 / 0 Done</div>
+            <button class="reset-btn" id="reset-btn">Reset All</button>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+
+</html>
