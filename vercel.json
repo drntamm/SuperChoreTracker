@@ -3,10 +3,6 @@
     "name": "super-chore-tracker",
     "builds": [
         {
-            "src": "index.html",
-            "use": "@vercel/static"
-        },
-        {
             "src": "api/*.js",
             "use": "@vercel/node"
         }
@@ -17,12 +13,8 @@
             "dest": "/api/$1"
         },
         {
-            "src": "/(?!api).*\\.(css|js|png|jpg|jpeg|svg|gif|ico|json)$",
-            "dest": "/$0"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "index.html"
+            "src": "^/(?!api|.*\\.[^/]+$)(.*?)/?$",
+            "dest": "/index.html"
         }
     ]
 }
