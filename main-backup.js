@@ -1,126 +1,3 @@
-// ========== AUTHENTICATION & CLOUD SYNC LAYER ==========
-
-let authToken = localStorage.getItem('auth_token') || null;
-let syncEnabled = localStorage.getItem('sync_enabled') === 'true';
-let lastSyncTime = 0;
-const SYNC_INTERVAL = 5000; // Auto-sync every 5 seconds
-
-class CloudSync {
-  static async login(email, password) {
-    try {
-      const response = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'login', email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Login failed');
-      }
-
-      const data = await response.json();
-      authToken = data.token;
-      localStorage.setItem('auth_token', authToken);
-      localStorage.setItem('sync_enabled', 'true');
-      syncEnabled = true;
-      return data;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
-  }
-
-  static async signup(email, password) {
-    try {
-      const response = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'signup', email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Signup failed');
-      }
-
-      const data = await response.json();
-      authToken = data.token;
-      localStorage.setItem('auth_token', authToken);
-      localStorage.setItem('sync_enabled', 'true');
-      syncEnabled = true;
-      return data;
-    } catch (error) {
-      console.error('Signup error:', error);
-      throw error;
-    }
-  }
-
-  static async syncToCloud() {
-    if (!authToken || !syncEnabled) return;
-
-    const now = Date.now();
-    if (now - lastSyncTime < SYNC_INTERVAL) return; // Rate limit
-
-    try {
-      lastSyncTime = now;
-      const response = await fetch('/api/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          users,
-          history,
-          children: users,
-        }),
-      });
-
-      if (!response.ok && response.status !== 401) {
-        console.warn('Sync failed:', response.status);
-      }
-    } catch (error) {
-      console.warn('Sync error (offline mode active):', error);
-    }
-  }
-
-  static async syncFromCloud() {
-    if (!authToken || !syncEnabled) return;
-
-    try {
-      const response = await fetch('/api/sync', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
-      });
-
-      if (!response.ok) return;
-
-      const data = await response.json();
-      if (data.success && data.data) {
-        users = data.data.users || users;
-        history = data.data.history || history;
-        saveAll();
-        return true;
-      }
-    } catch (error) {
-      console.warn('Fetch sync error:', error);
-    }
-    return false;
-  }
-
-  static logout() {
-    authToken = null;
-    syncEnabled = false;
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('sync_enabled');
-  }
-}
-
-// ========== ORIGINAL CHORE TRACKER CODE ==========
-
 // Helper to check if it's Thursday/Saturday
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 function getDayIndex() { return new Date().getDay(); }
@@ -201,137 +78,15 @@ const pinDisplay = document.getElementById('pin-display');
 const keypad = document.getElementById('keypad');
 const dateDisplay = document.getElementById('current-date');
 
-// Auth Modal Elements
-const authModal = document.getElementById('auth-modal');
-const authForm = document.getElementById('auth-form');
-const loginForm = document.getElementById('login-form');
-const signupForm = document.getElementById('signup-form');
-const authTabs = document.querySelectorAll('.auth-tab');
-const authError = document.getElementById('auth-error');
-const logoutBtn = document.getElementById('logout-btn');
-const offlineModeLink = document.getElementById('offline-mode-link');
-
-// ========== AUTHENTICATION FLOW ==========
-
-function showAuthModal() {
-    authModal.classList.remove('hidden');
-}
-
-function hideAuthModal() {
-    authModal.classList.add('hidden');
-}
-
-// Auth tab switching
-authTabs.forEach(tab => {
-    tab.addEventListener('click', (e) => {
-        e.preventDefault();
-        const mode = tab.dataset.mode;
-
-        authTabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-
-        loginForm.classList.toggle('active', mode === 'login');
-        signupForm.classList.toggle('active', mode === 'signup');
-
-        authError.textContent = '';
-        authForm.reset();
-    });
-});
-
-// Handle auth form submission
-authForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    authError.textContent = '';
-
-    const isLogin = loginForm.classList.contains('active');
-
-    if (isLogin) {
-        const email = document.getElementById('login-email').value.trim();
-        const password = document.getElementById('login-password').value;
-
-        if (!email || !password) {
-            authError.textContent = 'Email and password required';
-            return;
-        }
-
-        try {
-            authError.textContent = 'Logging in...';
-            await CloudSync.login(email, password);
-            hideAuthModal();
-            await CloudSync.syncFromCloud();
-            init();
-            authForm.reset();
-        } catch (error) {
-            authError.textContent = error.message;
-        }
-    } else {
-        const email = document.getElementById('signup-email').value.trim();
-        const password = document.getElementById('signup-password').value;
-        const confirm = document.getElementById('signup-confirm').value;
-
-        if (!email || !password || !confirm) {
-            authError.textContent = 'All fields required';
-            return;
-        }
-
-        if (password !== confirm) {
-            authError.textContent = 'Passwords do not match';
-            return;
-        }
-
-        if (password.length < 6) {
-            authError.textContent = 'Password must be at least 6 characters';
-            return;
-        }
-
-        try {
-            authError.textContent = 'Creating account...';
-            await CloudSync.signup(email, password);
-            hideAuthModal();
-            init();
-            authForm.reset();
-        } catch (error) {
-            authError.textContent = error.message;
-        }
-    }
-});
-
-// Offline mode link
-offlineModeLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    hideAuthModal();
-    init();
-});
-
-// Logout button
-logoutBtn.addEventListener('click', () => {
-    if (confirm('Logout and clear cloud sync?')) {
-        CloudSync.logout();
-        hideAuthModal();
-        showAuthModal();
-    }
-});
-
-// Show logout button only when authenticated
-function updateLogoutBtn() {
-    logoutBtn.style.display = authToken ? 'flex' : 'none';
-}
-
-// ========== INITIALIZATION & SYNC ==========
-
 // Initialize
 function init() {
+    // Migrate old history format if needed (if history was simple object, now it's keyed by user)
+    // Most logic already handles history[currentUser], but we ensure users array and history keys match
     renderUserSelector();
     updateDateDisplay();
     loadCurrentDayState();
     renderChores();
     updateTheme();
-    updateLogoutBtn();
-
-    // Start periodic cloud sync
-    if (syncEnabled) {
-        setInterval(() => CloudSync.syncToCloud(), SYNC_INTERVAL);
-    }
 }
 
 function updateDateDisplay() {
@@ -348,6 +103,7 @@ function loadCurrentDayState() {
     const today = getTodayDate();
     if (!history[currentUser]) history[currentUser] = {};
     if (!history[currentUser][today]) {
+        // Create new daily entry if it doesn't exist
         const morning = CHORE_TEMPLATES.morning
             .filter(c => !c.day || c.day === getDayIndex())
             .map(c => ({ ...c, completed: false, isCustom: false }));
@@ -390,7 +146,6 @@ function toggleChore(id) {
         chore.completed = !chore.completed;
         saveAll();
         renderChores();
-        CloudSync.syncToCloud();
     }
 }
 
@@ -399,7 +154,6 @@ function deleteChore(id) {
     history[currentUser][today][currentMode] = history[currentUser][today][currentMode].filter(c => c.id !== id);
     saveAll();
     renderChores();
-    CloudSync.syncToCloud();
 }
 
 function addChore() {
@@ -415,7 +169,6 @@ function addChore() {
         choreInput.value = '';
         saveAll();
         renderChores();
-        CloudSync.syncToCloud();
     }
 }
 
@@ -427,6 +180,7 @@ function saveAll() {
         if (parentalPin) localStorage.setItem('chore_pin', parentalPin);
     } catch (e) {
         console.error("Failed to save to localStorage:", e);
+        // Fallback for full storage or other issues
         if (e.name === 'QuotaExceededError') {
             alert("Storage is full! Please clear some chores or browser data.");
         }
@@ -522,6 +276,7 @@ function renderSettings() {
         userMgmtList.appendChild(div);
     });
 
+    // Add PIN management option
     const pinDiv = document.createElement('div');
     pinDiv.className = 'user-edit-row';
     pinDiv.style.marginTop = '20px';
@@ -542,7 +297,7 @@ function renameUser(index, newName) {
     const oldName = users[index];
     newName = newName.trim();
     if (!newName || newName === oldName) {
-        renderSettings();
+        renderSettings(); // Reset to current name if empty or same
         return;
     }
 
@@ -552,19 +307,21 @@ function renameUser(index, newName) {
         return;
     }
 
+    // Update users array
     users[index] = newName;
 
+    // Migrate history
     if (history[oldName]) {
         history[newName] = history[oldName];
         delete history[oldName];
     }
 
+    // Update current user if renamed
     if (currentUser === oldName) {
         currentUser = newName;
     }
 
     saveAll();
-    CloudSync.syncToCloud();
     renderUserSelector();
     renderChores();
     renderSettings();
@@ -586,7 +343,6 @@ function deleteUser(index) {
         }
 
         saveAll();
-        CloudSync.syncToCloud();
         renderUserSelector();
         renderChores();
         renderSettings();
@@ -597,7 +353,6 @@ addUserBtn.onclick = () => {
     const newName = `New Child ${users.length + 1}`;
     users.push(newName);
     saveAll();
-    CloudSync.syncToCloud();
     renderUserSelector();
     renderSettings();
 };
@@ -605,10 +360,11 @@ addUserBtn.onclick = () => {
 // Security Logic
 let currentPinBuffer = '';
 let securityCallback = null;
-let securityMode = 'VERIFY';
+let securityMode = 'VERIFY'; // 'VERIFY' or 'SET'
 
 function requireParentalControl(callback) {
     if (!parentalPin) {
+        // No PIN set yet, but we should probably advise setting one
         callback();
         return;
     }
@@ -686,18 +442,8 @@ resetBtn.onclick = () => {
             history[currentUser][today][currentMode].forEach(c => c.completed = false);
             saveAll();
             renderChores();
-            CloudSync.syncToCloud();
         }
     });
 };
 
-// ========== STARTUP LOGIC ==========
-
-// Check if authenticated, otherwise show login
-if (authToken) {
-    // Try to sync from cloud on startup
-    CloudSync.syncFromCloud().then(() => init());
-} else {
-    // Show auth modal
-    showAuthModal();
-}
+init();
