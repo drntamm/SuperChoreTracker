@@ -241,9 +241,11 @@ authTabs.forEach(tab => {
 // Handle auth form submission
 authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    console.log('Auth form submitted');
     authError.textContent = '';
 
     const isLogin = loginForm.classList.contains('active');
+    console.log('Is login:', isLogin);
 
     if (isLogin) {
         const email = document.getElementById('login-email').value.trim();
@@ -256,12 +258,15 @@ authForm.addEventListener('submit', async (e) => {
 
         try {
             authError.textContent = 'Logging in...';
+            console.log('Attempting login with:', { email });
             await CloudSync.login(email, password);
+            console.log('Login successful');
             hideAuthModal();
             await CloudSync.syncFromCloud();
             init();
             authForm.reset();
         } catch (error) {
+            console.error('Login exception:', error);
             authError.textContent = error.message;
         }
     } else {
@@ -286,11 +291,14 @@ authForm.addEventListener('submit', async (e) => {
 
         try {
             authError.textContent = 'Creating account...';
+            console.log('Attempting signup with:', { email });
             await CloudSync.signup(email, password);
+            console.log('Signup successful');
             hideAuthModal();
             init();
             authForm.reset();
         } catch (error) {
+            console.error('Signup exception:', error);
             authError.textContent = error.message;
         }
     }
