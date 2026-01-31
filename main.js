@@ -694,9 +694,17 @@ resetBtn.onclick = () => {
 // ========== STARTUP LOGIC ==========
 
 // Check if authenticated, otherwise show login
-if (authToken) {
+if (authToken && syncEnabled) {
     // Try to sync from cloud on startup
-    CloudSync.syncFromCloud().then(() => init());
+    CloudSync.syncFromCloud().then(() => {
+        init();
+    }).catch(() => {
+        // If sync fails, clear token and show auth modal
+        authToken = null;
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('sync_enabled');
+        showAuthModal();
+    });
 } else {
     // Show auth modal
     showAuthModal();
