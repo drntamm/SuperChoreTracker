@@ -1,4 +1,5 @@
 // ========== AUTHENTICATION & CLOUD SYNC LAYER ==========
+console.log('main.js loaded');
 
 let authToken = localStorage.getItem('auth_token') || null;
 let syncEnabled = localStorage.getItem('sync_enabled') === 'true';
@@ -239,6 +240,8 @@ authTabs.forEach(tab => {
 });
 
 // Handle auth form submission
+console.log('Setting up auth form listener on:', authForm);
+if (!authForm) console.error('authForm is null!');
 authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     console.log('Auth form submitted');
