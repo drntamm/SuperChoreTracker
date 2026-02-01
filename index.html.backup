@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Chore Tracker</title>
+    <meta name="description"
+        content="A vibrant, kid-friendly chore tracker to help children stay organized with morning and evening routines.">
+    <meta name="theme-color" content="#FF9A9E">
+    <link rel="stylesheet" href="style.css?v=2">
+</head>
+
+<body>
+    <!-- Auth Modal (Hidden by default) -->
+    <div id="auth-modal" class="auth-modal hidden">
+        <div class="auth-card">
+            <h2>Super Chore Tracker</h2>
+            <p class="auth-subtitle">Parental Access Required</p>
+            
+            <form id="auth-form" novalidate>
+                <div class="auth-toggle">
+                    <button type="button" class="auth-tab active" data-mode="login">Login</button>
+                    <button type="button" class="auth-tab" data-mode="signup">Sign Up</button>
+                </div>
+
+                <div id="login-form" class="auth-section active">
+                    <input type="email" id="login-email" name="login-email" placeholder="Email">
+                    <input type="password" id="login-password" name="login-password" placeholder="Password">
+                    <button type="submit" class="auth-submit">Login</button>
+                </div>
+
+                <div id="signup-form" class="auth-section">
+                    <input type="email" id="signup-email" name="signup-email" placeholder="Email">
+                    <input type="password" id="signup-password" name="signup-password" placeholder="Password (min 6 chars)" minlength="6">
+                    <input type="password" id="signup-confirm" name="signup-confirm" placeholder="Confirm Password" minlength="6">
+                    <button type="submit" class="auth-submit">Create Account</button>
+                </div>
+
+                <div id="auth-error" class="auth-error"></div>
+            </form>
+
+            <p class="auth-offline">Can't connect? Use <a href="#" id="offline-mode-link">offline mode</a></p>
+        </div>
+    </div>
+
+    <div class="app-container">
+
+
+        <div class="top-bar">
+            <select id="user-select" class="user-select">
+                <!-- Users will be injected here -->
+            </select>
+            <button class="stats-toggle" id="stats-toggle" aria-label="View statistics">📊 Stats</button>
+            <button class="settings-toggle" id="settings-toggle" aria-label="Manage Users">⚙️</button>
+            <button class="logout-btn" id="logout-btn" aria-label="Logout" title="Logout">🚪</button>
+        </div>
+
+        <header>
+            <div class="mode-selector">
+                <button class="mode-btn morning active" id="morning-mode">
+                    <span class="icon">☀️</span> Morning
+                </button>
+                <button class="mode-btn evening" id="evening-mode">
+                    <span class="icon">🌙</span> Evening
+                </button>
+            </div>
+            <h1 id="app-title">Chore Time!</h1>
+            <div id="current-date" class="current-date">Wednesday, Jan 28</div>
+            <p class="subtitle" id="app-subtitle">Check your tasks for a great morning!</p>
+        </header>
+
+        <!-- Stats View (Hidden by default) -->
+        <div id="stats-view" class="stats-view hidden">
+            <h3>Weekly Progress</h3>
+            <div class="stats-grid" id="stats-grid">
+                <!-- Daily stats will be injected here -->
+            </div>
+            <button class="close-view" id="close-stats">Close</button>
+        </div>
+
+        <!-- Settings View -->
+        <div id="settings-view" class="settings-view hidden">
+            <h3>Manage Names</h3>
+            <div id="user-management-list" class="user-management-list">
+                <!-- User edit rows will be injected here -->
+            </div>
+            <button class="add-user-btn" id="add-user-btn">+ Add Child</button>
+            <button class="close-view" id="close-settings">Close</button>
+        </div>
+
+        <!-- Security View (PIN) -->
+        <div id="security-view" class="security-view hidden">
+            <h3 id="security-title">Parental Control</h3>
+            <p id="security-msg">Enter PIN to continue</p>
+            <div class="pin-display" id="pin-display">
+                <span></span><span></span><span></span><span></span>
+            </div>
+            <div class="keypad" id="keypad">
+                <button class="key">1</button><button class="key">2</button><button class="key">3</button>
+                <button class="key">4</button><button class="key">5</button><button class="key">6</button>
+                <button class="key">7</button><button class="key">8</button><button class="key">9</button>
+                <button class="key side">C</button><button class="key">0</button><button class="key side">✕</button>
+            </div>
+            <button class="close-view" id="close-security">Cancel</button>
+        </div>
+
+        <ul class="chore-list" id="chore-list">
+            <!-- Chores will be injected here -->
+        </ul>
+
+        <div class="add-chore">
+            <input type="text" id="chore-input" placeholder="Add a new chore...">
+            <button class="add-btn" id="add-btn" aria-label="Add chore">Add</button>
+        </div>
+
+        <div class="footer-actions">
+            <div class="progress-info" id="progress-info">0 / 0 Done</div>
+            <button class="reset-btn" id="reset-btn">Reset All</button>
+        </div>
+    </div>
+
+    <script src="main.js?v=2"></script>
+</body>
+
+</html>

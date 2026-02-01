@@ -697,3 +697,290 @@ if (authToken && syncEnabled) {
     // Show auth modal
     showAuthModal();
 }
+
+dashboardToggle.onclick = () => {
+    dashboardView.classList.remove('hidden');
+    renderDashboard();
+};
+
+closeDashboard.onclick = () => {
+    dashboardView.classList.add('hidden');
+};
+
+profileToggle.onclick = () => {
+    profileView.classList.remove('hidden');
+    renderProfile();
+};
+
+closeProfile.onclick = () => {
+    profileView.classList.add('hidden');
+};
+
+saveProfileBtn.onclick = () => {
+    parentProfile.name = document.getElementById('parent-name').value;
+    parentProfile.phone = document.getElementById('parent-phone').value;
+    parentProfile.familyName = document.getElementById('family-name').value;
+    parentProfile.timezone = document.getElementById('parent-timezone').value;
+    
+    saveAll();
+    CloudSync.syncToCloud();
+    alert('Profile saved successfully!');
+};
+
+function renderProfile() {
+    document.getElementById('parent-name').value = parentProfile.name || '';
+    document.getElementById('parent-email').value = parentProfile.email || '';
+    document.getElementById('parent-phone').value = parentProfile.phone || '';
+    document.getElementById('family-name').value = parentProfile.familyName || '';
+    document.getElementById('parent-timezone').value = parentProfile.timezone || 'America/New_York';
+}
+
+function renderDashboard() {
+    const allStats = {};
+    
+    users.forEach(user => {
+        allStats[user] = calculateStreaks(user);
+    });
+    
+    const currentStats = allStats[currentUser];
+    
+    document.getElementById('streak-value').textContent = currentStats.currentStreak + ' days';
+    document.getElementById('week-completion').textContent = currentStats.weeklyCompletion + '%';
+    document.getElementById('best-streak').textContent = currentStats.bestStreak + ' days';
+    document.getElementById('total-tasks').textContent = currentStats.totalTasks;
+    
+    renderPerformanceChart(currentUser);
+    renderInsights(currentStats, currentUser);
+    renderComparison(allStats);
+}
+
+function calculateStreaks(user) {
+    const userHistory = history[user] || {};
+    const dates = Object.keys(userHistory).sort();
+    
+    let currentStreak = 0;
+    let bestStreak = 0;
+    let tempStreak = 0;
+    let totalTasks = 0;
+    let completedTasks = 0;
+    
+    const today = getTodayDate();
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        last7Days.push(d.toISOString().split('T')[0]);
+    }
+    
+    dates.forEach(date => {
+        const dayData = userHistory[date];
+        const morningChores = dayData.morning || [];
+        const eveningChores = dayData.evening || [];
+        const allChores = [...morningChores, ...eveningChores];
+        
+        const completed = allChores.filter(c => c.completed).length;
+        const total = allChores.length;
+        
+        totalTasks += total;
+        completedTasks += completed;
+        
+        if (total > 0 && completed === total) {
+            tempStreak++;
+            if (tempStreak > bestStreak) bestStreak = tempStreak;
+        } else {
+            tempStreak = 0;
+        }
+    });
+    
+    let consecutiveDays = 0;
+    for (let i = last7Days.length - 1; i >= 0; i--) {
+        const date = last7Days[i];
+        if (userHistory[date]) {
+            const dayData = userHistory[date];
+            const allChores = [...(dayData.morning || []), ...(dayData.evening || [])];
+            const completed = allChores.filter(c => c.completed).length;
+            const total = allChores.length;
+            
+            if (total > 0 && completed === total) {
+                consecutiveDays++;
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+    currentStreak = consecutiveDays;
+    
+    let weekCompleted = 0;
+    let weekTotal = 0;
+    last7Days.forEach(date => {
+        if (userHistory[date]) {
+            const dayData = userHistory[date];
+            const allChores = [...(dayData.morning || []), ...(dayData.evening || [])];
+            weekCompleted += allChores.filter(c => c.completed).length;
+            weekTotal += allChores.length;
+        }
+    });
+    
+    const weeklyCompletion = weekTotal > 0 ? Math.round((weekCompleted / weekTotal) * 100) : 0;
+    
+    return {
+        currentStreak,
+        bestStreak,
+        weeklyCompletion,
+        totalTasks
+    };
+}
+
+function renderPerformanceChart(user) {
+    const chartContainer = document.getElementById('performance-chart');
+    chartContainer.innerHTML = '';
+    
+    const userHistory = history[user] || {};
+    const last30Days = [];
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        last30Days.push(d.toISOString().split('T')[0]);
+    }
+    
+    last30Days.forEach(date => {
+        const dayData = userHistory[date];
+        let percentage = 0;
+        
+        if (dayData) {
+            const allChores = [...(dayData.morning || []), ...(dayData.evening || [])];
+            const completed = allChores.filter(c => c.completed).length;
+            const total = allChores.length;
+            percentage = total > 0 ? (completed / total) * 100 : 0;
+        }
+        
+        const bar = document.createElement('div');
+        bar.className = 'chart-bar';
+        
+        const barFill = document.createElement('div');
+        barFill.className = 'bar';
+        barFill.style.height = percentage + '%';
+        
+        const label = document.createElement('div');
+        label.className = 'bar-label';
+        label.textContent = new Date(date).getDate();
+        
+        bar.appendChild(barFill);
+        bar.appendChild(label);
+        chartContainer.appendChild(bar);
+    });
+}
+
+function renderInsights(stats, user) {
+    const insightsList = document.getElementById('insights-list');
+    insightsList.innerHTML = '';
+    
+    const insights = generateInsights(stats, user);
+    
+    insights.forEach(insight => {
+        const item = document.createElement('div');
+        item.className = 'insight-item';
+        item.innerHTML = '<span class="insight-icon">' + insight.icon + '</span><span class="insight-text">' + insight.text + '</span>';
+        insightsList.appendChild(item);
+    });
+}
+
+function generateInsights(stats, user) {
+    const insights = [];
+    
+    if (stats.currentStreak >= 7) {
+        insights.push({
+            icon: '🔥',
+            text: 'Amazing! ' + user + ' has a ' + stats.currentStreak + '-day streak!'
+        });
+    } else if (stats.currentStreak >= 3) {
+        insights.push({
+            icon: '⭐',
+            text: 'Great job! ' + user + ' is on a ' + stats.currentStreak + '-day streak!'
+        });
+    } else if (stats.currentStreak === 0) {
+        insights.push({
+            icon: '💪',
+            text: "Let's start a new streak today!"
+        });
+    }
+    
+    if (stats.weeklyCompletion >= 90) {
+        insights.push({
+            icon: '🏆',
+            text: 'Excellent! ' + stats.weeklyCompletion + '% completion this week!'
+        });
+    } else if (stats.weeklyCompletion >= 70) {
+        insights.push({
+            icon: '👍',
+            text: 'Good work! ' + stats.weeklyCompletion + '% completion this week.'
+        });
+    } else if (stats.weeklyCompletion < 50) {
+        insights.push({
+            icon: '📈',
+            text: "Room for improvement. Let's aim higher this week!"
+        });
+    }
+    
+    if (stats.bestStreak > stats.currentStreak && stats.bestStreak >= 5) {
+        insights.push({
+            icon: '🎯',
+            text: 'Personal best is ' + stats.bestStreak + ' days. Let\'s beat it!'
+        });
+    }
+    
+    const today = getTodayDate();
+    const todayData = history[user]?.[today];
+    if (todayData) {
+        const morningChores = todayData.morning || [];
+        const eveningChores = todayData.evening || [];
+        const morningCompleted = morningChores.filter(c => c.completed).length;
+        const eveningCompleted = eveningChores.filter(c => c.completed).length;
+        
+        if (morningChores.length > 0 && morningCompleted === morningChores.length) {
+            insights.push({
+                icon: '☀️',
+                text: 'Morning routine completed! Great start to the day!'
+            });
+        }
+        
+        if (eveningChores.length > 0 && eveningCompleted === eveningChores.length) {
+            insights.push({
+                icon: '🌙',
+                text: 'Evening routine completed! Sleep well!'
+            });
+        }
+    }
+    
+    if (insights.length === 0) {
+        insights.push({
+            icon: '🌟',
+            text: 'Keep up the great work!'
+        });
+    }
+    
+    return insights;
+}
+
+function renderComparison(allStats) {
+    const comparisonGrid = document.getElementById('comparison-grid');
+    comparisonGrid.innerHTML = '';
+    
+    users.forEach(user => {
+        const stats = allStats[user];
+        const card = document.createElement('div');
+        card.className = 'comparison-card';
+        
+        const html = '<div class="comparison-name">' + user + '</div>' +
+            '<div class="comparison-stats">' +
+            '<div class="comparison-stat"><span class="stat-label">Streak</span><span class="stat-value">' + stats.currentStreak + ' days</span></div>' +
+            '<div class="comparison-stat"><span class="stat-label">This Week</span><span class="stat-value">' + stats.weeklyCompletion + '%</span></div>' +
+            '<div class="comparison-stat"><span class="stat-label">Best</span><span class="stat-value">' + stats.bestStreak + ' days</span></div>' +
+            '</div>';
+        
+        card.innerHTML = html;
+        comparisonGrid.appendChild(card);
+    });
+}
