@@ -2,30 +2,27 @@
 console.log('main.js loaded');
 
 let authToken = localStorage.getItem('auth_token') || null;
-let syncEnabled = localStorage.getItem('sync_enabled') === 'true';
+let syncEnabled = true; // Always enabled in offline mode
 let lastSyncTime = 0;
 const SYNC_INTERVAL = 5000; // Auto-sync every 5 seconds
 
 class CloudSync {
   static async login(email, password) {
     try {
-      const response = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'login', email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Login failed');
+      // Offline-only login - store credentials locally
+      if (!email || !password) {
+        throw new Error('Email and password required');
       }
-
-      const data = await response.json();
-      authToken = data.token;
+      
+      const token = btoa(`${email}:${password}`);
+      authToken = token;
       localStorage.setItem('auth_token', authToken);
+      localStorage.setItem('auth_email', email);
       localStorage.setItem('sync_enabled', 'true');
       syncEnabled = true;
-      return data;
+      
+      console.log('Offline login successful');
+      return { token, message: 'Login successful (offline mode)' };
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -34,23 +31,20 @@ class CloudSync {
 
   static async signup(email, password) {
     try {
-      const response = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'signup', email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Signup failed');
+      // Offline-only signup - store credentials locally
+      if (!email || !password) {
+        throw new Error('Email and password required');
       }
-
-      const data = await response.json();
-      authToken = data.token;
+      
+      const token = btoa(`${email}:${password}`);
+      authToken = token;
       localStorage.setItem('auth_token', authToken);
+      localStorage.setItem('auth_email', email);
       localStorage.setItem('sync_enabled', 'true');
       syncEnabled = true;
-      return data;
+      
+      console.log('Offline signup successful');
+      return { token, message: 'Account created (offline mode)' };
     } catch (error) {
       console.error('Signup error:', error);
       throw error;
@@ -65,24 +59,12 @@ class CloudSync {
 
     try {
       lastSyncTime = now;
-      const response = await fetch('/api/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          users,
-          history,
-          children: users,
-        }),
-      });
-
-      if (!response.ok && response.status !== 401) {
-        console.warn('Sync failed:', response.status);
-      }
+      // In offline mode, just save to localStorage
+      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('history', JSON.stringify(history));
+      console.log('Data saved to offline storage');
     } catch (error) {
-      console.warn('Sync error (offline mode active):', error);
+      console.warn('Offline storage error:', error);
     }
   }
 
@@ -90,26 +72,21 @@ class CloudSync {
     if (!authToken || !syncEnabled) return;
 
     try {
-      const response = await fetch('/api/sync', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
-      });
-
-      if (!response.ok) return;
-
-      const data = await response.json();
-      if (data.success && data.data) {
-        users = data.data.users || users;
-        history = data.data.history || history;
-        saveAll();
-        return true;
+      // In offline mode, load from localStorage
+      const savedUsers = localStorage.getItem('users');
+      const savedHistory = localStorage.getItem('history');
+      
+      if (savedUsers) {
+        Object.assign(users, JSON.parse(savedUsers));
       }
+      if (savedHistory) {
+        history.splice(0, history.length, ...JSON.parse(savedHistory));
+      }
+      
+      console.log('Data loaded from offline storage');
     } catch (error) {
-      console.warn('Fetch sync error:', error);
+      console.warn('Offline storage error:', error);
     }
-    return false;
   }
 
   static logout() {
